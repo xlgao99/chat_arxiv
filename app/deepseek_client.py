@@ -77,3 +77,9 @@ class DeepSeekClient:
         assert last_err is not None
         raise last_err
 
+if __name__ == "__main__":
+    client = DeepSeekClient(api_key='sk-243e0a6960e74681aaae62aaeabc15b3')
+    messages = [
+        {"role": "user", "content": "who r y?"}
+    ]
+    print(client.chat(messages=messages))

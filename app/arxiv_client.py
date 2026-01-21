@@ -14,7 +14,7 @@ class ArxivPaper:
     arxiv_id: str
     title: str
     summary: str
-    authors: list[str]
+    authors: list[tuple[str, str]]
     categories: list[str]
     published: datetime
     updated: datetime
@@ -39,18 +39,21 @@ def _extract_arxiv_id(entry_id: str) -> str:
     return path
 
 
-def build_query(categories: Iterable[str]) -> str:
+def build_query(categories: Iterable[str], keywords: Iterable[str]) -> str:
     cats = [c.strip() for c in categories if c and c.strip()]
     if not cats:
         raise ValueError("categories 不能为空")
     # (cat:cs.AI OR cat:cs.LG OR cat:stat.ML)
     parts = [f"cat:{c}" for c in cats]
+    if keywords:
+        parts.append(f"ti:{' AND'.join(keywords)}")
     query = " OR ".join(parts)
     return f"({query})"
 
 
 def fetch_recent(
     categories: list[str],
+    keywords: list[str] = ['Data Selection'],
     since_hours: int = 24,
     max_results: int = 50,
     session: requests.Session | None = None,
@@ -58,12 +61,12 @@ def fetch_recent(
     """
     Fetch recent papers sorted by lastUpdatedDate, then filter by updated >= now - since_hours.
     """
-    q = build_query(categories)
+    q = build_query(categories, keywords)
     params = {
         "search_query": q,
         "start": 0,
         "max_results": int(max_results),
-        "sortBy": "lastUpdatedDate",
+        "sortBy": "lastUpdatedDate", # relevance
         "sortOrder": "descending",
     }
     url = "http://export.arxiv.org/api/query?" + urllib.parse.urlencode(params)
@@ -74,7 +77,7 @@ def fetch_recent(
 
     feed = feedparser.parse(resp.text)
     now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(hours=int(since_hours))
+    cutoff = now - timedelta(hours=int(since_hours * 7))
 
     papers: list[ArxivPaper] = []
     for entry in feed.entries:
@@ -87,8 +90,8 @@ def fetch_recent(
         arxiv_id = _extract_arxiv_id(entry.id)
         title = " ".join((entry.title or "").split())
         summary = " ".join((entry.summary or "").split())
-
-        authors = [a.name for a in getattr(entry, "authors", []) if getattr(a, "name", None)]
+        #breakpoint()
+        authors = [(a.name, a.get('arxiv_affiliation', '未提供')) for a in getattr(entry, "authors", []) if getattr(a, "name", None)]
         categories = [t.term for t in getattr(entry, "tags", []) if getattr(t, "term", None)]
 
         link_abs = None
@@ -121,3 +124,8 @@ def fetch_recent(
         )
     return papers
 
+if __name__ == "__main__":
+    papers = fetch_recent(categories=["cs.AI", "cs.LG", "stat.ML"], keywords=['Data Selection'],
+                           max_results=10)
+    #breakpoint()
+    print(papers)

@@ -10,7 +10,7 @@ class RenderItem:
     title: str
     arxiv_id: str
     link_abs: str
-    authors: list[str]
+    authors: list[tuple[str, str]]
     categories: list[str]
     updated_iso: str
     matched_keywords: list[str]
@@ -29,6 +29,32 @@ class RenderedEmail:
 def _shorten(text: str, n: int = 900) -> str:
     t = " ".join((text or "").split())
     return t if len(t) <= n else (t[: n - 1] + "…")
+
+def _format_authors(authors: object) -> str:
+    """
+    统一把 authors 格式化为可读字符串。
+    兼容两种形态：
+    - list[tuple[name, affiliation]]
+    - list[str]
+    """
+    if not authors:
+        return ""
+    if isinstance(authors, list):
+        parts: list[str] = []
+        for a in authors:
+            if isinstance(a, tuple) and len(a) >= 1:
+                name = str(a[0]).strip()
+                aff = str(a[1]).strip() if len(a) >= 2 and a[1] is not None else ""
+                if name and aff:
+                    parts.append(f"{name} ({aff})")
+                elif name:
+                    parts.append(name)
+            else:
+                s = str(a).strip()
+                if s:
+                    parts.append(s)
+        return ", ".join(parts)
+    return str(authors)
 
 
 def render_email(
@@ -51,7 +77,7 @@ def render_email(
         lines.append(f"   arXiv: {it.arxiv_id}")
         lines.append(f"   Link: {it.link_abs}")
         if it.authors:
-            lines.append(f"   Authors: {', '.join(it.authors)}")
+            lines.append(f"   Authors: {_format_authors(it.authors)}")
         if it.categories:
             lines.append(f"   Categories: {', '.join(it.categories)}")
         if it.matched_keywords:
@@ -96,7 +122,7 @@ def render_email(
         meta = []
         meta.append(f"<b>arXiv</b>: {escape(it.arxiv_id)}")
         if it.authors:
-            meta.append(f"<b>Authors</b>: {escape(', '.join(it.authors))}")
+            meta.append(f"<b>Authors</b>: {escape(_format_authors(it.authors))}")
         if it.categories:
             meta.append(f"<b>Categories</b>: {escape(', '.join(it.categories))}")
         meta.append(f"<b>Updated</b>: {escape(it.updated_iso)}")

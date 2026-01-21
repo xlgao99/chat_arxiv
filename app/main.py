@@ -29,9 +29,11 @@ def main() -> int:
 
     papers = fetch_recent(
         categories=cfg.arxiv_categories,
+        keywords=cfg.keywords,
         since_hours=cfg.since_hours,
         max_results=cfg.limit,
     )
+    
     print(f"[arxiv] fetched {len(papers)} entries in last {cfg.since_hours}h (limit={cfg.limit})")
 
     filtered = filter_papers(papers, cfg.keywords, min_score=1)

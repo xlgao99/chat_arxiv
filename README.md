@@ -55,4 +55,3 @@ DRY_RUN=1 SINCE_HOURS=24 LIMIT=30 python -m app.main
 
 工作流在 `.github/workflows/daily.yml`，默认每天定时运行，也支持手动触发。
 首次使用需要在仓库设置里添加上述 Secrets。
-

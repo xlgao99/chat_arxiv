@@ -17,6 +17,30 @@ class PaperSummary:
 SYSTEM_PROMPT = """你是一位严谨的科研助理，擅长快速阅读论文摘要并产出结构化中文总结。
 要求：信息准确，不夸大；当摘要没有提供细节时要明确说明。输出使用 Markdown。"""
 
+def _format_authors(authors: object) -> str:
+    """
+    arXiv 解析出来的 authors 目前是 list[tuple[name, affiliation]]。
+    这里做一次兜底，避免在 prompt 拼接时因 tuple 导致 join TypeError。
+    """
+    if not authors:
+        return "(未知)"
+    if isinstance(authors, list):
+        parts: list[str] = []
+        for a in authors:
+            if isinstance(a, tuple) and len(a) >= 1:
+                name = str(a[0]).strip()
+                aff = str(a[1]).strip() if len(a) >= 2 and a[1] is not None else ""
+                if name and aff:
+                    parts.append(f"{name} ({aff})")
+                elif name:
+                    parts.append(name)
+            else:
+                s = str(a).strip()
+                if s:
+                    parts.append(s)
+        return ", ".join(parts) if parts else "(未知)"
+    return str(authors).strip() or "(未知)"
+
 
 def build_user_prompt(p: ArxivPaper, matched_keywords: Iterable[str]) -> str:
     kws = ", ".join(matched_keywords) if matched_keywords else "(无)"
@@ -26,7 +50,7 @@ def build_user_prompt(p: ArxivPaper, matched_keywords: Iterable[str]) -> str:
 {p.title}
 
 【作者】
-{", ".join(p.authors) if p.authors else "(未知)"}
+{_format_authors(p.authors)}
 
 【分类】
 {", ".join(p.categories) if p.categories else "(未知)"}

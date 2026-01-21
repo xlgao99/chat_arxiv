@@ -2,8 +2,9 @@ name: daily-arxiv
 
 on:
   schedule:
-    # 每天 00:30 UTC（约北京时间 08:30）运行，可自行调整
-    - cron: "30 0 * * *"
+    # GitHub Actions cron 使用 UTC。
+    # 每天北京时间 07:00 = UTC 23:00（中国无夏令时），因此这里设为 23:00 UTC。
+    - cron: "0 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -87,7 +88,5 @@ jobs:
           fi
           git status --porcelain
           git add data/state.json
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore: update arXiv state"
           git push

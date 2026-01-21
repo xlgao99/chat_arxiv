@@ -1,0 +1,53 @@
+## 测试用配置（建议本地运行）
+## 使用方式（两选一）：
+## 1) 临时覆盖默认配置：cp config.test.yaml config.yaml
+## 2) 或直接用环境变量覆盖（见 README）
+
+arxiv:
+  # 订阅类别（可按需增删）
+  categories:
+    - cs.AI
+    - cs.LG
+    - stat.ML
+  # 最近 N 小时内更新/新增
+  since_hours: 6
+  # 最多抓取数量（测试时建议小一点）
+  limit: 10
+  # 测试关键词（可自行替换；不填则会使用内置默认关键词）
+  keywords:
+    - reinforcement learning
+    - rlhf
+    - post-training
+    - alignment
+    - llm
+
+state:
+  # 测试状态文件，避免污染正式的 data/state.json
+  path: data/state.test.json
+  backend: repo
+  resend_on_update: false
+
+deepseek:
+  # 测试时建议置空（不会调用总结）
+  api_key: null
+  base_url: https://api.deepseek.com
+  model: deepseek-chat
+  timeout_s: 60
+  max_retries: 3
+
+mail:
+  # 测试模式：不发邮件、不更新 state（会在 stdout 打印渲染结果）
+  dry_run: true
+  # 若你想在测试时也走 SMTP，可把 dry_run 改为 false 并补齐以下字段
+  smtp_host: null
+  smtp_port: 587
+  smtp_user: null
+  smtp_pass: null
+  use_ssl: false
+  starttls: true
+  from: null
+  to: []
+
+render:
+  subject_prefix: "[TEST arXiv日报]"
+  timezone: Asia/Shanghai
