@@ -7,7 +7,7 @@ import urllib.parse
 
 import feedparser
 import requests
-
+import re 
 
 @dataclass(frozen=True)
 class ArxivPaper:
@@ -38,17 +38,30 @@ def _extract_arxiv_id(entry_id: str) -> str:
         path = path.split("/", 1)[1]
     return path
 
+def _quote_term(s: str) -> str:
+    s = s.strip()
+    if not s:
+        return ""
+
+    if re.search(r'\s|["()]', s):
+        s = s.replace('"', '\\"')
+        return f'"{s}"'
+    return s
 
 def build_query(categories: Iterable[str], keywords: Iterable[str]) -> str:
     cats = [c.strip() for c in categories if c and c.strip()]
     if not cats:
         raise ValueError("categories 不能为空")
-    # (cat:cs.AI OR cat:cs.LG OR cat:stat.ML)
+    # (cat:cs.AI OR cat:cs.LG OR cat:stat.ML) AND (ti: DataSelection)  
     parts = [f"cat:{c}" for c in cats]
-    if keywords:
-        parts.append(f"ti:{' AND'.join(keywords)}")
-    query = " OR ".join(parts)
-    return f"({query})"
+    cats_query = " OR ".join(parts)
+
+    kw_list = [_quote_term(k) for k in keywords if k and str(k).strip()]
+    if not kw_list:
+        return f"({cats_query})"
+        
+    kw_query = " OR ".join(["ti:{k}" for k in kw_list])
+    return f"({cats_query}) AND ({kw_query})"
 
 
 def fetch_recent(
@@ -77,7 +90,7 @@ def fetch_recent(
 
     feed = feedparser.parse(resp.text)
     now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(hours=int(since_hours * 7))
+    cutoff = now - timedelta(hours=int(since_hours))
 
     papers: list[ArxivPaper] = []
     for entry in feed.entries:
@@ -125,7 +138,7 @@ def fetch_recent(
     return papers
 
 if __name__ == "__main__":
-    papers = fetch_recent(categories=["cs.AI", "cs.LG", "stat.ML"], keywords=['Data Selection'],
-                           max_results=10)
+    papers = fetch_recent(categories=["cs.AI", "cs.LG", "stat.ML, cs.cv"], keywords=['reinforcement learning', 'policy optimization', 'rl', 'post-training', 'alignment', 'rlhf', 'preference optimization', 'llm', 'language model', 'agent'],
+                           max_results=10, since_hours=72)
     #breakpoint()
     print(papers)

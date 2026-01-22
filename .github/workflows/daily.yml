@@ -4,7 +4,7 @@ on:
   schedule:
     # GitHub Actions cron 使用 UTC。
     # 每天北京时间 07:00 = UTC 23:00（中国无夏令时），因此这里设为 23:00 UTC。
-    - cron: "0 * * * *"
+    - cron: "0 23 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -18,7 +18,7 @@ on:
       limit:
         description: "覆盖 LIMIT（默认 50）"
         required: false
-        default: "50"
+        default: "30"
 
 permissions:
   contents: write
@@ -49,6 +49,7 @@ jobs:
       - name: Run daily job
         env:
           # arXiv
+          ARXIV_CATEGORIES: ${{ vars.ARXIV_CATEGORIES }}
           SINCE_HOURS: ${{ github.event.inputs.since_hours || secrets.SINCE_HOURS || '24' }}
           LIMIT: ${{ github.event.inputs.limit || secrets.LIMIT || '50' }}
 
@@ -76,6 +77,8 @@ jobs:
             echo "No state changes."
             exit 0
           fi
+          git config user.name "Am_mu"
+          git config user.email "gxlin233@qq.com"
           git status --porcelain
           git add data/state.json
           git commit -m "chore: update arXiv state"
