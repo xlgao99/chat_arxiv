@@ -49,6 +49,7 @@ jobs:
       - name: Run daily job
         env:
           # arXiv
+          ARXIV_CATEGORIES: ${{ vars.ARXIV_CATEGORIES }}
           SINCE_HOURS: ${{ github.event.inputs.since_hours || secrets.SINCE_HOURS || '24' }}
           LIMIT: ${{ github.event.inputs.limit || secrets.LIMIT || '50' }}
 
@@ -76,6 +77,8 @@ jobs:
             echo "No state changes."
             exit 0
           fi
+          git config user.name "Am_mu"
+          git config user.email "gxlin233@qq.com"
           git status --porcelain
           git add data/state.json
           git commit -m "chore: update arXiv state"

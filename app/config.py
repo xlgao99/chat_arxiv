@@ -107,7 +107,7 @@ def load_config(config_path: str = "config.yaml") -> Config:
 
     categories = (
         _getenv_str("ARXIV_CATEGORIES")
-        or ",".join(arxiv_cfg.get("categories", ["cs.AI", "cs.LG", "stat.ML"]))
+        or ",".join(arxiv_cfg.get("categories", ["cs.AI", "cs.LG", "stat.ML", "cs.CV"]))
     )
     arxiv_categories = [c.strip() for c in categories.split(",") if c.strip()]
 
