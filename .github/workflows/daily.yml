@@ -70,16 +70,16 @@ jobs:
           DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
         run: python -m app.main
 
-      - name: Commit updated state.json (repo backend)
-        if: ${{ github.event.inputs.dry_run != '1' }}
-        run: |
-          if git diff --quiet -- data/state.json; then
-            echo "No state changes."
-            exit 0
-          fi
-          git config user.name "Am_mu"
-          git config user.email "gxlin233@qq.com"
-          git status --porcelain
-          git add data/state.json
-          git commit -m "chore: update arXiv state"
-          git push
+      # - name: Commit updated state.json (repo backend)
+      #   if: ${{ github.event.inputs.dry_run != '1' }}
+      #   run: |
+      #     if git diff --quiet -- data/state.json; then
+      #       echo "No state changes."
+      #       exit 0
+      #     fi
+      #     git config user.name "Am_mu"
+      #     git config user.email "gxlin233@qq.com"
+      #     git status --porcelain
+      #     git add data/state.json
+      #     git commit -m "chore: update arXiv state"
+      #     git push
