@@ -2,27 +2,26 @@ name: daily-arxiv
 
 on:
   schedule:
-    # GitHub Actions cron 使用 UTC。
-    # 每天北京时间 07:00 = UTC 23:00（中国无夏令时），因此这里设为 23:00 UTC。
-    - cron: "0 23 * * *"
+    - cron: "0 23 * * *" # 北京时间 07:00
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "DRY_RUN=1 时不发邮件/不写 state（仅渲染输出）"
+        description: "1=仅渲染不发送/不更新状态, 0=正常执行"
         required: false
         default: "0"
       since_hours:
-        description: "覆盖 SINCE_HOURS（默认 24）"
+        description: "追溯过去 X 小时的论文"
         required: false
         default: "24"
       limit:
-        description: "覆盖 LIMIT（默认 50）"
+        description: "最大处理论文数量"
         required: false
         default: "30"
 
 permissions:
   contents: write
 
+# 限制同一时间只有一个 job 运行，防止 state.json 冲突
 concurrency:
   group: daily-arxiv
   cancel-in-progress: false
@@ -30,56 +29,54 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20 # 适当缩短超时
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1 # state 模式下不需要全量历史
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: pip
+          cache: 'pip' # 自动缓存依赖
 
       - name: Install dependencies
-        run: python -m pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
       - name: Run daily job
         env:
-          # arXiv
           ARXIV_CATEGORIES: ${{ vars.ARXIV_CATEGORIES }}
-          SINCE_HOURS: ${{ github.event.inputs.since_hours || secrets.SINCE_HOURS || '24' }}
-          LIMIT: ${{ github.event.inputs.limit || secrets.LIMIT || '50' }}
-
-          # DeepSeek
+          # 优化后的变量读取逻辑
+          SINCE_HOURS: ${{ github.event.inputs.since_hours || vars.SINCE_HOURS || '24' }}
+          LIMIT: ${{ github.event.inputs.limit || vars.LIMIT || '50' }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-
-          # SMTP / Mail
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           MAIL_TO: ${{ secrets.MAIL_TO }}
-
-          # Others
           STATE_PATH: data/state.json
-          RESEND_ON_UPDATE: ${{ secrets.RESEND_ON_UPDATE }}
+          RESEND_ON_UPDATE: ${{ secrets.RESEND_ON_UPDATE || 'false' }}
           DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
         run: python -m app.main
 
-      # - name: Commit updated state.json (repo backend)
-      #   if: ${{ github.event.inputs.dry_run != '1' }}
-      #   run: |
-      #     if git diff --quiet -- data/state.json; then
-      #       echo "No state changes."
-      #       exit 0
-      #     fi
-      #     git config user.name "Am_mu"
-      #     git config user.email "gxlin233@qq.com"
-      #     git status --porcelain
-      #     git add data/state.json
-      #     git commit -m "chore: update arXiv state"
-      #     git push
+      - name: Commit updated state.json
+        # 仅在非 dry_run 且是主分支运行任务时提交
+        if: ${{ success() && github.event.inputs.dry_run != '1' }}
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 检查文件是否存在且有变化
+          if [ -f data/state.json ] && ! git diff --quiet data/state.json; then
+            git add data/state.json
+            git commit -m "chore: update arXiv state [skip ci]"
+            git push
+          else
+            echo "No changes in state.json, skipping commit."
+          fi
